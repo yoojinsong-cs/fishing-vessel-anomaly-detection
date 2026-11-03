@@ -81,6 +81,6 @@ Python · pandas · NumPy · scikit-learn · LightGBM · PyTorch · pyproj · Sh
 
 | 팀원 | 담당 |
 |---|---|
-| 송유진 (본인) | 전체 파이프라인 통합(`run_all.py`), 저장소 구조 정리, 테스트셋 전체 채점·제출 파일, 결과 대시보드·공개 배포 |
+| 송유진 | 전체 파이프라인 통합(`run_all.py`), 저장소 구조 정리, 테스트셋 전체 채점·제출 파일, 결과 대시보드·공개 배포 |
 | 강혜승 | 조업형태 분류 모델 (`NAVIS_classifier/`) |
 | 부혜민 | 이상탐지 V2.5 (`NAVIS_anomaly_final/`) |
