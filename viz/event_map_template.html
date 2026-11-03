@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NAVIS 사건 지도</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+<style>
+:root{--bg:#fff;--panel:#fff;--text:#1f2328;--muted:#656d76;--line:#d0d7de;--accent:#0969da}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0d1117;--panel:#161b22;--text:#e6edf3;--muted:#8b949e;--line:#30363d;--accent:#58a6ff}}
+:root[data-theme=dark]{--bg:#0d1117;--panel:#161b22;--text:#e6edf3;--muted:#8b949e;--line:#30363d;--accent:#58a6ff}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Malgun Gothic",sans-serif}
+#app{display:flex;height:100%}
+#side{width:300px;flex:none;background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;padding:16px}
+#map{flex:1;min-width:0}
+h1{font-size:17px;margin:0 0 2px}
+.sub{color:var(--muted);font-size:12px;margin-bottom:14px}
+fieldset{border:0;border-top:1px solid var(--line);margin:0;padding:12px 0}
+legend{font-size:12px;color:var(--muted);padding:0 6px 0 0;font-weight:600}
+label.row{display:flex;align-items:center;gap:8px;padding:3px 0;cursor:pointer}
+label.row .n{margin-left:auto;color:var(--muted);font-variant-numeric:tabular-nums;font-size:12px}
+.dot{width:11px;height:11px;border-radius:50%;flex:none}
+input[type=date],select{width:100%;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:5px 7px;font:inherit}
+.dates{display:flex;gap:6px}
+input[type=range]{width:100%}
+#count{font-size:13px;font-weight:600;padding:10px 0}
+#info{border-top:1px solid var(--line);padding-top:12px;font-size:13px}
+#info dl{margin:6px 0 0;display:grid;grid-template-columns:auto 1fr;gap:3px 10px}
+#info dt{color:var(--muted)}
+#info dd{margin:0;word-break:break-all}
+button{background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:5px 10px;font:inherit;cursor:pointer}
+button:hover{border-color:var(--accent)}
+.hint{color:var(--muted);font-size:12px}
+@media(max-width:700px){#app{flex-direction:column-reverse}#side{width:100%;height:42%;border-right:0;border-top:1px solid var(--line)}}
+</style>
+</head>
+<body>
+<div id="app">
+  <aside id="side">
+    <h1>NAVIS 사건 지도</h1>
+    <div class="sub">이상탐지 사건의 위치(마지막 관측 지점)</div>
+
+    <fieldset><legend>사건 유형</legend><div id="f-kind"></div></fieldset>
+    <fieldset><legend>경보 수준</legend><div id="f-level"></div></fieldset>
+    <fieldset><legend>업종</legend><div id="f-code"></div></fieldset>
+    <fieldset><legend>기간</legend>
+      <div class="dates"><input type="date" id="d0"><input type="date" id="d1"></div>
+    </fieldset>
+    <fieldset><legend>최소 지속시간 <span id="hv">1</span>시간 이상</legend>
+      <input type="range" id="minh" min="1" max="24" value="1">
+    </fieldset>
+    <fieldset><legend>선박 번호 검색</legend>
+      <input type="search" id="vq" placeholder="선박 번호 검색" style="width:100%;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:5px 7px;font:inherit">
+    </fieldset>
+
+    <div id="count"></div>
+    <div style="display:flex;gap:6px;margin-bottom:12px">
+      <button id="theme">밝게/어둡게</button><button id="clear">선택 해제</button>
+    </div>
+    <div id="info"><span class="hint">점을 클릭하면 상세 정보와 이동 경로가 표시됩니다. 큰 점은 '경보', 작은 점은 '주의'입니다.</span></div>
+  </aside>
+  <div id="map"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script>
+const DATA=__DATA__, KINDS=__KINDS__, LEVELS=__LEVELS__, CODES=__CODES__;
+// [id,lat,lon,kindIdx,kindRaw,levelIdx,codeIdx,vessel,hours,maxScore,distPort,reason,start,end,path]
+const COLORS=['#D55E00','#0072B2','#009E73','#CC79A7'];
+const RADIUS=[6,4,4];
+const $=id=>document.getElementById(id);
+const state={kind:new Set(KINDS.keys()),level:new Set([0]),code:new Set(CODES.keys())};
+
+function mkChecks(el,names,key,colors){
+  const counts=names.map((_,i)=>DATA.filter(d=>d[{kind:3,level:5,code:6}[key]]===i).length);
+  names.forEach((nm,i)=>{
+    const l=document.createElement('label');l.className='row';
+    l.innerHTML=`<input type="checkbox" ${state[key].has(i)?'checked':''}>${colors?`<span class="dot" style="background:${colors[i]}"></span>`:''}<span>${nm}</span><span class="n">${counts[i].toLocaleString()}</span>`;
+    l.querySelector('input').onchange=e=>{e.target.checked?state[key].add(i):state[key].delete(i);render()};
+    el.appendChild(l);
+  });
+}
+mkChecks($('f-kind'),KINDS,'kind',COLORS);
+mkChecks($('f-level'),LEVELS,'level');
+mkChecks($('f-code'),CODES,'code');
+
+const dmin=DATA.reduce((a,d)=>d[12]<a?d[12]:a,'9'),dmax=DATA.reduce((a,d)=>d[13]>a?d[13]:a,'0');
+$('d0').value=dmin.slice(0,10);$('d1').value=dmax.slice(0,10);
+['d0','d1','vq'].forEach(i=>$(i).oninput=render);
+$('minh').oninput=()=>{$('hv').textContent=$('minh').value;render()};
+
+const map=L.map('map',{preferCanvas:true,zoomControl:true,zoomSnap:.25});
+const LAND=__LAND__;
+const landLayers=LAND.map(r=>L.polygon(r,{weight:.8,interactive:false}).addTo(map));
+map.fitBounds([[32.8,123.5],[38.9,131.8]]);
+map.attributionControl.setPrefix(false).addAttribution('육지: Natural Earth');
+const canvas=L.canvas({padding:.5});
+const layer=L.layerGroup().addTo(map), pathLayer=L.layerGroup().addTo(map);
+
+function isDark(){const t=document.documentElement.dataset.theme;return t?t==='dark':matchMedia('(prefers-color-scheme:dark)').matches}
+function applyTiles(){const d=isDark();
+  map.getContainer().style.background=d?'#0f1a26':'#dbe9f6';
+  landLayers.forEach(l=>l.setStyle({color:d?'#3a4655':'#aab4c0',fillColor:d?'#1b232d':'#f1f3f5',fillOpacity:1}));}
+$('theme').onclick=()=>{document.documentElement.dataset.theme=isDark()?'light':'dark';applyTiles()};
+applyTiles();
+
+function select(d){
+  pathLayer.clearLayers();
+  const c=COLORS[d[3]];
+  if(d[14].length>1)L.polyline(d[14],{color:c,weight:2.5,opacity:.8,dashArray:'5 4'}).addTo(pathLayer);
+  L.circleMarker(d[14][0],{radius:5,color:c,fillColor:'#fff',fillOpacity:1,weight:2}).bindTooltip('시작').addTo(pathLayer);
+  L.circleMarker([d[1],d[2]],{radius:8,color:'#fff',weight:2,fillColor:c,fillOpacity:1}).bindTooltip('끝').addTo(pathLayer);
+  $('info').innerHTML=`<b style="color:${c}">● ${d[4]}</b>
+  <dl><dt>수준</dt><dd>${LEVELS[d[5]]}</dd><dt>선박</dt><dd>${d[7]}</dd><dt>업종</dt><dd>${CODES[d[6]]}</dd>
+  <dt>기간</dt><dd>${d[12]} ~ ${d[13]}</dd><dt>지속</dt><dd>${d[8]}시간</dd>
+  <dt>최대 점수</dt><dd>${d[9]}</dd><dt>모항까지</dt><dd>${d[10]} km</dd><dt>주요 사유</dt><dd>${d[11]}</dd>
+  <dt>사건 번호</dt><dd>${d[0]}</dd></dl>
+  <div class="hint" style="margin-top:8px">점선: 경보 구간 위치 이동 (시작○ → 끝●)</div>`;
+}
+$('clear').onclick=()=>{pathLayer.clearLayers();$('info').innerHTML='<span class="hint">점을 클릭하면 상세 정보와 이동 경로가 표시됩니다.</span>'};
+
+function render(){
+  layer.clearLayers();
+  const d0=$('d0').value,d1=$('d1').value+' 99',mh=+$('minh').value,q=$('vq').value.trim();
+  let n=0;const cnt=[0,0,0,0];
+  for(const d of DATA){
+    if(!state.kind.has(d[3])||!state.level.has(d[5])||!state.code.has(d[6]))continue;
+    if(d[13]<d0||d[12]>d1||d[8]<mh)continue;
+    if(q&&!d[7].includes(q))continue;
+    n++;cnt[d[3]]++;
+    L.circleMarker([d[1],d[2]],{renderer:canvas,radius:RADIUS[d[5]],color:COLORS[d[3]],weight:d[5]===0?1.5:.5,fillColor:COLORS[d[3]],fillOpacity:d[5]===0?.75:.45})
+      .on('click',()=>select(d)).addTo(layer);
+  }
+  $('count').textContent=`표시 중: ${n.toLocaleString()}건 / 전체 ${DATA.length.toLocaleString()}건`;
+}
+render();
+</script>
+</body>
+</html>

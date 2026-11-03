@@ -1,0 +1,13 @@
+# run_all.py (분류 + 이상탐지 전체)에 필요한 패키지
+numpy
+pandas
+scikit-learn
+scipy
+matplotlib
+joblib
+lightgbm     # 분류 모델(testA). Mac에서 libomp 오류가 나면 `brew install libomp`
+torch        # 이상탐지 3단계 오토인코더
+pyarrow      # parquet 저장·읽기
+openpyxl     # xlsx 읽기·쓰기
+pyproj       # 이상탐지 특징 추출 (좌표 변환)
+shapely      # 이상탐지 특징 추출 (항적 geom)

@@ -1,0 +1,10 @@
+numpy
+pandas
+scikit-learn
+scipy
+matplotlib
+joblib
+lightgbm     # 조업형태 분류(testA) 모델. 없으면 sklearn HistGB로 대체되어 결과가 달라짐
+torch        # 선택: 없으면 오토인코더를 sklearn MLP로 대체
+pyarrow      # 선택: parquet 입력 시
+openpyxl     # 필수: 테스트 xlsx 읽기 · submission.xlsx 쓰기

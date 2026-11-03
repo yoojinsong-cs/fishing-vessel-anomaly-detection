@@ -1,0 +1,14 @@
+# 데이터·결과는 올리지 않는다 (대회 데이터, 선박 번호 포함)
+data/
+out/
+*.csv
+!NAVIS_classifier/results/*.csv
+*.xlsx
+*.parquet
+*.joblib
+*.pt
+navis_paths.json
+.venv/
+__pycache__/
+cache/
+.DS_Store

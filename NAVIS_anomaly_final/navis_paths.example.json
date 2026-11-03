@@ -1,0 +1,9 @@
+{
+  "_설명": "이 파일을 navis_paths.json 으로 복사해서 내 컴퓨터 경로만 적는다 (navis_paths.json 은 깃에 올리지 않음). 필요 없는 항목은 지운다. 상대경로는 레포 루트 기준.",
+  "raw_dir": "data/vpass_1월_6월 데이터",
+  "feat_dir": "NAVIS_features",
+  "out_dir": "out/NAVIS_anomaly",
+  "test_raw_dir": "data/테스트셋",
+  "submit_sample": "data/제출샘플.xlsx",
+  "cls_repo": "NAVIS_classifier"
+}
